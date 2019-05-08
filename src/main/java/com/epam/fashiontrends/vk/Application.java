@@ -16,48 +16,50 @@ import com.vk.api.sdk.streaming.exceptions.StreamingApiException;
 import com.vk.api.sdk.streaming.exceptions.StreamingClientException;
 import com.vk.api.sdk.streaming.objects.StreamingCallbackMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.cli.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
+
+import static com.epam.fashiontrends.vk.AppOptions.*;
 
 @Slf4j
 public class Application {
 
-    private static final Integer APP_ID = 6974634;
-    private static final String CLIENT_SECRET = "A5elsaLFqQ8R8V39LyG6";
-    private static final String TOPIC_NAME = "default";
+    private static Integer appId;
+    private static String clientSecret;
+    private static String topicName;
+    private static String rulesFile;
 
-    private static final String[] values = {
-            "детское платье -скидка -продам -недорого -закупка",
-            "летнее платье -скидка -продам -недорого -закупка",
-            "куплю платье -скидка -продам -недорого -закупка",
-            "хочу летнее платье -скидка -продам -недорого -закупка",
-            "хочу обновить гардероб -скидка -продам -недорого -закупка",
-            "хочу юбку -скидка -продам -недорого -закупка",
-            "хочу блузку -скидка -продам -недорого -закупка",
-            "люблю платья -скидка -продам -недорого -закупка",
-            "платье мечта -скидка -продам -недорого -закупка",
-            "лето платье -скидка -продам -недорого -закупка",
-            "платье ребенку -скидка -продам -недорого -закупка",
-            "юбку ребенку -скидка -продам -недорого -закупка",
-            "блузку ребенку -скидка -продам -недорого -закупка"};
+    private static final Options OPTS = new Options();
 
     public static void main(String[] args)
             throws ClientException,
             ApiException,
             ExecutionException,
-            InterruptedException, StreamingApiException, StreamingClientException {
+            InterruptedException,
+            StreamingApiException,
+            StreamingClientException,
+            ParseException,
+            IOException {
+
+        initOptions();
+        if (!init(args))
+            System.exit(0);
 
         TransportClient transportClient = HttpTransportClient.getInstance();
         VkApiClient vk = new VkApiClient(transportClient);
         VkStreamingApiClient streamingClient = new VkStreamingApiClient(transportClient);
 
         ServiceClientCredentialsFlowResponse authResponse = vk.oAuth()
-                .serviceClientCredentialsFlow(APP_ID, CLIENT_SECRET)
+                .serviceClientCredentialsFlow(appId, clientSecret)
                 .execute();
 
-        ServiceActor serviceActor = new ServiceActor(APP_ID, authResponse.getAccessToken());
+        ServiceActor serviceActor = new ServiceActor(appId, authResponse.getAccessToken());
 
         GetServerUrlResponse getServerUrlResponse = vk.streaming().getServerUrl(serviceActor).execute();
         StreamingActor streamingActor = new StreamingActor(getServerUrlResponse.getEndpoint(), getServerUrlResponse.getKey());
@@ -69,23 +71,65 @@ public class Application {
             @Override
             public void handle(StreamingCallbackMessage message) {
                 log.info(message.toString());
-                producer.send(new ProducerRecord<>(TOPIC_NAME, message));
+                producer.send(new ProducerRecord<>(topicName, message));
             }
         }).execute();
     }
 
-    private static void recreateRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor) throws StreamingClientException, StreamingApiException {
-        for (int i = 0; i < values.length; i++) {
+
+    private static boolean init(String[] args) throws ParseException {
+        CommandLine cliParser = new GnuParser().parse(OPTS, args);
+
+        if (args.length == 0) {
+            throw new IllegalArgumentException("No args specified for client to initialize");
+        }
+
+        if (cliParser.hasOption("help")) {
+            printUsage();
+            return false;
+        }
+
+        rulesFile = cliParser.getOptionValue(RULES_FILE.getName());
+        appId = Integer.parseInt(cliParser.getOptionValue(APP_ID.getName()));
+        clientSecret = cliParser.getOptionValue(CLIENT_SECRET.getName());
+        topicName = cliParser.getOptionValue(TOPIC.getName(), "default");
+
+        if (rulesFile == null) throw new NullPointerException("File path cannot be null");
+        if (appId == null) throw new NullPointerException("Application ID cannot be null");
+        if (clientSecret == null) throw new NullPointerException("Client secret cannot be null");
+        if (topicName == null) throw new NullPointerException("Topic name cannot be null");
+
+        return true;
+    }
+
+
+    private static void initOptions() {
+        OPTS.addOption(RULES_FILE.getName(), true, "File path with rules for searching");
+        OPTS.addOption(APP_ID.getName(), true, "VK Application ID");
+        OPTS.addOption(CLIENT_SECRET.getName(), true, "VK Client Secret");
+        OPTS.addOption(HELP.getName(), true, "Print usage");
+    }
+
+
+    private static void printUsage() {
+        new HelpFormatter().printHelp("Client", OPTS);
+    }
+
+
+    private static void recreateRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor)
+            throws StreamingClientException, IOException, StreamingApiException {
+
+        Properties properties = new Properties();
+        properties.load(new FileInputStream(rulesFile));
+
+        for (String tag : properties.stringPropertyNames()) {
             try {
-                streamingClient.rules().delete(streamingActor, String.valueOf(i)).execute();
+                streamingClient.rules().add(streamingActor, tag, properties.getProperty(tag)).execute();
             } catch (StreamingApiException e) {
-                continue;
+                log.error("Such rule already exists");
             }
         }
 
-        for (int i = 0; i < values.length; i++) {
-            streamingClient.rules().add(streamingActor, String.valueOf(i), values[i]).execute();
-        }
         log.info(streamingClient.rules().get(streamingActor).execute().toString());
     }
 }

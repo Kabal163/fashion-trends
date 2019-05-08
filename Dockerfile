@@ -3,7 +3,7 @@ FROM openjdk:8-jdk-alpine3.7 AS builder
 MAINTAINER Dmitrii Kanaev <Dmitrii_Kanaev@epam.com>
 
 COPY . /usr/src/fashion-trends
-WORKDIR /usr/src/myDocker
+WORKDIR /usr/src/fashion-trends
 RUN apk add --no-cache maven && mvn --version
 RUN mvn package
 
@@ -13,7 +13,7 @@ FROM openjdk:8-jre-alpine3.7
 WORKDIR /usr/app/fashion-trends
 COPY --from=builder /usr/src/fashion-trends/target/fashion-trends-0.0.1.jar .
 COPY --from=builder /usr/src/fashion-trends/src/main/resources/rules.properties .
-COPY --from=builder /usr/src/fashion-trends/src/main/resources/app/fashion-trends-start.sh /usr/local/bin/
+COPY --from=builder /usr/src/fashion-trends/fashion-trends-start.sh /usr/local/bin/
 RUN apk update && apk add --no-cache \
     nano \
     rsync \
@@ -29,4 +29,7 @@ RUN ssh-keygen -A
 RUN echo PermitRootLogin yes >> /etc/ssh/sshd_config
 
 
-ENTRYPOINT ["sh", "/usr/local/bin/fashion-trends-start.sh", "/usr/app/fashion-trends/fashion-trends-0.0.1.jar"]
+ENTRYPOINT ["sh", \
+"/usr/local/bin/fashion-trends-start.sh", \
+"/usr/app/fashion-trends/fashion-trends-0.0.1.jar", \
+"/usr/app/fashion-trends/rules.properties"]
