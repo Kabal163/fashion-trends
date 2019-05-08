@@ -1,5 +1,4 @@
 #Step 1 - compile from sources and create jar
-
 FROM openjdk:8-jdk-alpine3.7 AS builder
 MAINTAINER Dmitrii Kanaev <Dmitrii_Kanaev@epam.com>
 
@@ -28,7 +27,6 @@ RUN echo 'root:screencast' | chpasswd
 RUN echo sshd_enable="YES" >> /etc/rc.conf
 RUN ssh-keygen -A
 RUN echo PermitRootLogin yes >> /etc/ssh/sshd_config
-
 
 ENTRYPOINT ["sh", \
 "/usr/local/bin/fashion-trends-start.sh", \
