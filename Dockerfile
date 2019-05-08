@@ -33,3 +33,4 @@ ENTRYPOINT ["sh", \
 "/usr/local/bin/fashion-trends-start.sh", \
 "/usr/app/fashion-trends/fashion-trends-0.0.1.jar", \
 "/usr/app/fashion-trends/rules.properties"]
+
