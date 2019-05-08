@@ -1,4 +1,5 @@
 #Step 1 - compile from sources and create jar
+
 FROM openjdk:8-jdk-alpine3.7 AS builder
 MAINTAINER Dmitrii Kanaev <Dmitrii_Kanaev@epam.com>
 
