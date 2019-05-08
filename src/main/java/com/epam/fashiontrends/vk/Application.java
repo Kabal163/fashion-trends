@@ -20,8 +20,11 @@ import org.apache.commons.cli.*;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -64,7 +67,7 @@ public class Application {
         GetServerUrlResponse getServerUrlResponse = vk.streaming().getServerUrl(serviceActor).execute();
         StreamingActor streamingActor = new StreamingActor(getServerUrlResponse.getEndpoint(), getServerUrlResponse.getKey());
 
-        recreateRules(streamingClient, streamingActor);
+        addRules(streamingClient, streamingActor);
 
         KafkaProducer<Long, StreamingCallbackMessage> producer = KafkaService.getProducer();
         streamingClient.stream().get(streamingActor, new StreamingEventHandler() {
@@ -106,6 +109,7 @@ public class Application {
     private static void initOptions() {
         OPTS.addOption(RULES_FILE.getName(), true, "File path with rules for searching");
         OPTS.addOption(APP_ID.getName(), true, "VK Application ID");
+        OPTS.addOption(TOPIC.getName(), true, "Kafka topic name");
         OPTS.addOption(CLIENT_SECRET.getName(), true, "VK Client Secret");
         OPTS.addOption(HELP.getName(), true, "Print usage");
     }
@@ -115,18 +119,28 @@ public class Application {
         new HelpFormatter().printHelp("Client", OPTS);
     }
 
-
-    private static void recreateRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor)
+    // Will replace existing rule if the new one has the same tag
+    private static void addRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor)
             throws StreamingClientException, IOException, StreamingApiException {
 
         Properties properties = new Properties();
-        properties.load(new FileInputStream(rulesFile));
+        properties.load(
+                new BufferedReader(
+                        new InputStreamReader(
+                                new FileInputStream(rulesFile),
+                                StandardCharsets.UTF_16)));
 
         for (String tag : properties.stringPropertyNames()) {
             try {
+                streamingClient.rules().delete(streamingActor, tag).execute();
+            } catch (StreamingApiException e) {
+                log.error("Cannot delete a rule. There is no such rule");
+            }
+            try {
+                log.info(tag + "=" + properties.getProperty(tag));
                 streamingClient.rules().add(streamingActor, tag, properties.getProperty(tag)).execute();
             } catch (StreamingApiException e) {
-                log.error("Such rule already exists");
+                log.error("Cannot create a rule. Such rule already exists");
             }
         }
 
