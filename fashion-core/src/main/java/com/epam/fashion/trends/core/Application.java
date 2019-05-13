@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
+import static com.epam.fashion.trends.core.AppOptions.*;
+
 @Slf4j
 public class Application {
 
@@ -32,6 +34,7 @@ public class Application {
     private static String clientSecret;
     private static String topicName;
     private static String rulesFile;
+    private static boolean needToRecreateRules;
     private static Map<String, String> rules;
 
     private static final Options OPTS = new Options();
@@ -63,7 +66,8 @@ public class Application {
         GetServerUrlResponse getServerUrlResponse = vk.streaming().getServerUrl(serviceActor).execute();
         StreamingActor streamingActor = new StreamingActor(getServerUrlResponse.getEndpoint(), getServerUrlResponse.getKey());
 
-        addRules(streamingClient, streamingActor);
+        if (needToRecreateRules)
+            recreateRules(streamingClient, streamingActor);
 
         streamingClient.stream().get(streamingActor, new EventHandler()).execute();
     }
@@ -81,10 +85,11 @@ public class Application {
             return false;
         }
 
-        rulesFile = cliParser.getOptionValue(AppOptions.RULES_FILE.getName());
-        appId = Integer.parseInt(cliParser.getOptionValue(AppOptions.APP_ID.getName()));
+        rulesFile = cliParser.getOptionValue(RULES_FILE.getName());
+        appId = Integer.parseInt(cliParser.getOptionValue(APP_ID.getName()));
         clientSecret = cliParser.getOptionValue(AppOptions.CLIENT_SECRET.getName());
-        topicName = cliParser.getOptionValue(AppOptions.TOPIC.getName(), "default");
+        topicName = cliParser.getOptionValue(TOPIC.getName(), "default");
+        needToRecreateRules = cliParser.hasOption(RECREATE_RULES.getName());
 
         if (rulesFile == null) throw new NullPointerException("File path cannot be null");
         if (appId == null) throw new NullPointerException("Application ID cannot be null");
@@ -96,11 +101,12 @@ public class Application {
 
 
     private static void initOptions() {
-        OPTS.addOption(AppOptions.RULES_FILE.getName(), true, "File path with rules for searching");
-        OPTS.addOption(AppOptions.APP_ID.getName(), true, "VK Application ID");
-        OPTS.addOption(AppOptions.TOPIC.getName(), true, "Kafka topic name");
-        OPTS.addOption(AppOptions.CLIENT_SECRET.getName(), true, "VK Client Secret");
-        OPTS.addOption(AppOptions.HELP.getName(), true, "Print usage");
+        OPTS.addOption(RULES_FILE.getName(), true, "File path with rules for searching");
+        OPTS.addOption(APP_ID.getName(), true, "VK Application ID");
+        OPTS.addOption(TOPIC.getName(), true, "Kafka topic name");
+        OPTS.addOption(CLIENT_SECRET.getName(), true, "VK Client Secret");
+        OPTS.addOption(RECREATE_RULES.getName(), false, "Recreates all rules");
+        OPTS.addOption(HELP.getName(), false, "Print usage");
     }
 
 
@@ -110,7 +116,7 @@ public class Application {
 
 
     //todo receive existing rule and remove them by key
-    private static void addRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor)
+    private static void recreateRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor)
             throws StreamingClientException, IOException, StreamingApiException {
 
         rules = new HashMap<>();

@@ -1,7 +1,7 @@
 package com.epam.fashion.trends.core.service;
 
 import com.epam.fashion.trends.api.entity.Message;
-import com.vk.api.sdk.streaming.objects.StreamingCallbackMessage;
+import com.epam.fashion.trends.core.serde.Message2ByteSerializer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.LongSerializer;
@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class KafkaService {
 
-    private static Map<Long, KafkaProducer<Long, StreamingCallbackMessage>> producers = new ConcurrentHashMap<>();
+    private static Map<Long, KafkaProducer<Long, Message>> producers = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     public static KafkaProducer<Long, Message> getProducer() {
@@ -21,7 +21,7 @@ public class KafkaService {
         return producer;
     }
 
-    private static KafkaProducer<Long, StreamingCallbackMessage> createProducer() {
+    private static KafkaProducer<Long, Message> createProducer() {
         Properties properties = new Properties();
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "sandbox.hortonworks.com:6667");
         properties.put(ProducerConfig.CLIENT_ID_CONFIG, "client_" + Thread.currentThread().getId());
@@ -29,7 +29,7 @@ public class KafkaService {
         properties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432");
         properties.put(ProducerConfig.BATCH_SIZE_CONFIG, "524288");
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class.getName());
-        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, Message.class.getName());
+        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, Message2ByteSerializer.class.getName());
 
         return new KafkaProducer<>(properties);
     }

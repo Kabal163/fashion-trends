@@ -5,7 +5,9 @@ public enum AppOptions {
     HELP("help"),
     APP_ID("app_id"),
     CLIENT_SECRET("client_secret"),
-    TOPIC("topic");
+    TOPIC("topic"),
+    RECREATE_RULES("recreate_rules");
+
 
     private String name;
 
