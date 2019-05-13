@@ -1,6 +1,6 @@
-package com.epam.fashiontrends.vk.service;
+package com.epam.fashion.trends.core.service;
 
-import com.epam.fashiontrends.vk.serde.Message2ByteSerializer;
+import com.epam.fashion.trends.api.entity.Message;
 import com.vk.api.sdk.streaming.objects.StreamingCallbackMessage;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -15,7 +15,7 @@ public class KafkaService {
     private static Map<Long, KafkaProducer<Long, StreamingCallbackMessage>> producers = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
-    public static KafkaProducer<Long, StreamingCallbackMessage> getProducer() {
+    public static KafkaProducer<Long, Message> getProducer() {
         KafkaProducer producer = producers.getOrDefault(Thread.currentThread().getId(), createProducer());
         producers.putIfAbsent(Thread.currentThread().getId(), producer);
         return producer;
@@ -29,7 +29,7 @@ public class KafkaService {
         properties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432");
         properties.put(ProducerConfig.BATCH_SIZE_CONFIG, "524288");
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, LongSerializer.class.getName());
-        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, Message2ByteSerializer.class.getName());
+        properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, Message.class.getName());
 
         return new KafkaProducer<>(properties);
     }

@@ -1,4 +1,4 @@
-package com.epam.fashiontrends.vk;
+package com.epam.fashion.trends.core;
 
 public enum AppOptions {
     RULES_FILE("rules"),
