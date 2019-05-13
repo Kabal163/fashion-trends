@@ -74,7 +74,8 @@ public class Application {
             @Override
             public void handle(StreamingCallbackMessage message) {
                 log.info(message.toString());
-                producer.send(new ProducerRecord<>(topicName, message));
+                long userId = message.getEvent().getAuthor().getId();
+                producer.send(new ProducerRecord<>(topicName, userId, message));
             }
         }).execute();
     }
@@ -118,6 +119,7 @@ public class Application {
     private static void printUsage() {
         new HelpFormatter().printHelp("Client", OPTS);
     }
+
 
     // Will replace existing rule if the new one has the same tag
     private static void addRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor)

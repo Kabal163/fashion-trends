@@ -6,13 +6,13 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.LongSerializer;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class KafkaService {
 
-    private static Map<Long, KafkaProducer<Long, StreamingCallbackMessage>> producers = new HashMap<>();
+    private static Map<Long, KafkaProducer<Long, StreamingCallbackMessage>> producers = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     public static KafkaProducer<Long, StreamingCallbackMessage> getProducer() {
