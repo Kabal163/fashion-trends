@@ -12,6 +12,8 @@ import com.vk.api.sdk.streaming.clients.VkStreamingApiClient;
 import com.vk.api.sdk.streaming.clients.actors.StreamingActor;
 import com.vk.api.sdk.streaming.exceptions.StreamingApiException;
 import com.vk.api.sdk.streaming.exceptions.StreamingClientException;
+import com.vk.api.sdk.streaming.objects.StreamingRule;
+import com.vk.api.sdk.streaming.objects.responses.StreamingGetRulesResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
 
@@ -115,7 +117,6 @@ public class Application {
     }
 
 
-    //todo receive existing rule and remove them by key
     private static void recreateRules(VkStreamingApiClient streamingClient, StreamingActor streamingActor)
             throws StreamingClientException, IOException, StreamingApiException {
 
@@ -128,11 +129,14 @@ public class Application {
                                 new FileInputStream(rulesFile),
                                 StandardCharsets.UTF_16)));
 
-        for (int i = 0; i < 30; i++) {
-            try {
-                streamingClient.rules().delete(streamingActor, String.valueOf(i)).execute();
-            } catch (StreamingApiException e) {
-                log.error("Cannot delete a rule. There is no such rule");
+        StreamingGetRulesResponse response = streamingClient.rules().get(streamingActor).execute();
+        if (response.getRules() != null) {
+            for (StreamingRule rule : response.getRules()) {
+                try {
+                    streamingClient.rules().delete(streamingActor, rule.getTag()).execute();
+                } catch (StreamingApiException e) {
+                    log.error("Cannot delete a rule. There is no such rule");
+                }
             }
         }
 

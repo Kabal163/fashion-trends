@@ -23,7 +23,7 @@ public class KafkaService {
 
     private static KafkaProducer<Long, Message> createProducer() {
         Properties properties = new Properties();
-        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "sandbox.hortonworks.com:6667");
+        properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "sandbox-hdp.hortonworks.com:6667");
         properties.put(ProducerConfig.CLIENT_ID_CONFIG, "client_" + Thread.currentThread().getId());
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
         properties.put(ProducerConfig.BUFFER_MEMORY_CONFIG, "33554432");
